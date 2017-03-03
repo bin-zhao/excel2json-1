@@ -29,21 +29,22 @@ namespace excel2json
                 try
                 {
                     Run(options);
+                    //-- 程序计时
+                    System.DateTime endTime = System.DateTime.Now;
+                    System.TimeSpan dur = endTime - startTime;
+                    Console.WriteLine(
+                        string.Format("[{0}]：\t转换完成[{1}毫秒].",
+                        Path.GetFileName(options.ExcelPath),
+                        dur.Milliseconds)
+                        );
                 }
                 catch (Exception exp)
                 {
                     Console.WriteLine("Error: " + exp.Message);
+//                     Console.WriteLine("\npress any key to continue...");
+//                     Console.ReadLine();
                 }
             }
-
-            //-- 程序计时
-            System.DateTime endTime = System.DateTime.Now;
-            System.TimeSpan dur = endTime - startTime;
-            Console.WriteLine(
-                string.Format("[{0}]：\t转换完成[{1}毫秒].",
-                Path.GetFileName(options.ExcelPath),
-                dur.Milliseconds)
-                );
         }
 
         /// <summary>
@@ -54,6 +55,13 @@ namespace excel2json
         {
             string excelPath = options.ExcelPath;
             int header = options.HeaderRows;
+
+            // TODO 支持转换路径下的所有表格 excelDir
+            if (excelPath == null || excelPath.Length <= 0)
+            {
+                Console.WriteLine("请输入表格文件名");
+                return;
+            }
 
             // 加载Excel文件
             using (FileStream excelFile = File.Open(excelPath, FileMode.Open, FileAccess.Read))
@@ -94,10 +102,17 @@ namespace excel2json
                 }
 
                 //-- 导出JSON文件
+                JsonExporter jsonExporter = new JsonExporter(sheet, header, options.Lowcase);
                 if (options.JsonPath != null && options.JsonPath.Length > 0)
                 {
-                    JsonExporter exporter = new JsonExporter(sheet, header, options.Lowcase);
-                    exporter.SaveToFile(options.JsonPath, cd);
+                    jsonExporter.SaveToFile(options.JsonPath, cd);
+                }
+                else
+                {
+                    string jsonDir = Path.GetDirectoryName(excelPath);
+                    string jsonFileName = Path.GetFileNameWithoutExtension(excelPath);
+                    string jsonFilePath = Path.Combine(jsonDir, jsonFileName + ".json");
+                    jsonExporter.SaveToFile(jsonFilePath, cd);
                 }
 
                 //-- 导出SQL文件

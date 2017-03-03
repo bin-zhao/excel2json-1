@@ -11,8 +11,16 @@ namespace excel2json
         /// </summary>
         private sealed class Options
         {
-            [Option('e', "excel", Required=true, HelpText = "输入的Excel文件路径.")]
+            // TODO 可以指定文件、也可以指定文件夹。
+            [Option('e', "excel", Required = false, HelpText = "输入的Excel文件路径.")]
             public string ExcelPath
+            {
+                get;
+                set;
+            }
+
+            [Option('d', "dir", Required = false, HelpText = "输入的Excel文件目录.")]
+            public string ExcelDir
             {
                 get;
                 set;
@@ -39,21 +47,21 @@ namespace excel2json
                 set;
             }
 
-            [Option('h', "header", Required = true, HelpText = "表格中有几行是表头.")]
+            [Option('h', "header", Required = false, DefaultValue = 4, HelpText = "表格中有几行是表头.")]
             public int HeaderRows
             {
                 get;
                 set;
             }
 
-            [Option('c', "encoding", Required = false, DefaultValue="utf8-nobom", HelpText = "指定编码的名称.")]
+            [Option('c', "encoding", Required = false, DefaultValue = "utf8-nobom", HelpText = "指定编码的名称.")]
             public string Encoding
             {
                 get;
                 set;
             }
 
-            [Option('l', "lowcase", Required = false, DefaultValue = false, HelpText = "字段名称自动转换为小写")]
+            [Option('l', "lowcase", Required = false, DefaultValue = true, HelpText = "字段名称自动转换为小写")]
             public bool Lowcase
             {
                 get;
