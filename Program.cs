@@ -3,6 +3,8 @@ using System.IO;
 using System.Data;
 using System.Text;
 using Excel;
+using System.Collections.Generic;
+using Newtonsoft.Json;
 
 namespace excel2json
 {
@@ -63,6 +65,13 @@ namespace excel2json
                 return;
             }
 
+            // 解析Json类型文件。
+            string protoFileDir = Path.GetDirectoryName(excelPath);
+            string protoFileName = Path.GetFileNameWithoutExtension(excelPath);
+            string protoFilePath = Path.Combine(protoFileDir, protoFileName + "_proto.json");
+            string protoFileContent = File.ReadAllText(protoFilePath);
+            Dictionary<string, string> typeDict = JsonConvert.DeserializeObject<Dictionary<string, string>>(protoFileContent);
+
             // 加载Excel文件
             using (FileStream excelFile = File.Open(excelPath, FileMode.Open, FileAccess.Read))
             {
@@ -79,8 +88,14 @@ namespace excel2json
                     throw new Exception("Excel文件中没有找到Sheet: " + excelPath);
                 }
 
+                Int32 sheetIndex = Convert.ToInt32(options.SheetIndex);
+                if (sheetIndex < 0 || sheetIndex >= book.Tables.Count)
+                {
+                    throw new Exception("指定的sheet不存在！ " + options.SheetIndex);
+                }
+
                 // 取得数据
-                DataTable sheet = book.Tables[0];
+                DataTable sheet = book.Tables[options.SheetIndex];
                 if (sheet.Rows.Count <= 0)
                 {
                     throw new Exception("Excel Sheet中没有数据: " + excelPath);
@@ -101,8 +116,27 @@ namespace excel2json
                     }
                 }
 
+                Int32[] columnRange = new Int32[2];
+                String[] subStrings = options.ColumnRange.Split('-');
+                if (subStrings.Length > 0)
+                {
+                    columnRange[0] = Convert.ToInt32(subStrings[0]);
+                }
+                else
+                {
+                    columnRange[0] = 1;
+                }
+                if (subStrings.Length > 1 && subStrings[1].Length > 0)
+                {
+                    columnRange[1] = Convert.ToInt32(subStrings[1]);
+                }
+                else
+                {
+                    columnRange[1] = -1;   // 到最后一行。
+                }
+
                 //-- 导出JSON文件
-                JsonExporter jsonExporter = new JsonExporter(sheet, header, options.Lowcase);
+                JsonExporter jsonExporter = new JsonExporter(sheet, header, options.Lowcase, columnRange, typeDict);
                 if (options.JsonPath != null && options.JsonPath.Length > 0)
                 {
                     jsonExporter.SaveToFile(options.JsonPath, cd);

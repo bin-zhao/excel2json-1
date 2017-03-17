@@ -4,6 +4,7 @@ using System.Data;
 using System.Text;
 using System.Collections.Generic;
 using Newtonsoft.Json;
+using System.Text.RegularExpressions;
 
 namespace excel2json
 {
@@ -14,14 +15,17 @@ namespace excel2json
     {
 //         Dictionary<string, Dictionary<string, object>> m_data_dict;
         List<object> m_data_array;
+        Dictionary<string, string> m_type_dict;
 
         /// <summary>
         /// 构造函数：完成内部数据创建
         /// </summary>
         /// <param name="sheet">ExcelReader创建的一个表单</param>
         /// <param name="headerRows">表单中的那几行是表头</param>
-        public JsonExporter(DataTable sheet, int headerRows, bool lowcase)
+        public JsonExporter(DataTable sheet, int headerRows, bool lowcase, Int32[] columnRange, Dictionary<string, string> typeDict)
         {
+            m_type_dict = typeDict;
+
             if (sheet.Columns.Count <= 0)
                 return;
             if (sheet.Rows.Count <= 0)
@@ -30,24 +34,61 @@ namespace excel2json
 //             m_data_dict = new Dictionary<string, Dictionary<string, object>>();
             m_data_array = new List<object>();
 
+            // row 行， column 列
+            if (columnRange[1] == -1)
+            {
+                columnRange[1] = sheet.Columns.Count - 1;
+            }
+            DataRow key = sheet.Rows[0];
+            for (int i = headerRows - 1; i < sheet.Rows.Count; ++i)
+            {
+                var rowData = new Dictionary<string, object>();
+                for (int j = columnRange[0]; j <= columnRange[1]; ++j)
+                {
+                    object value = sheet.Rows[i][j];
+                    value = StringValue2TypeValueEx(Convert.ToString(key[j]), value);
+                    // 表头自动转换成小写
+                    string fieldName = Convert.ToString(key[j]);
+                    if (lowcase)
+                        fieldName = fieldName.ToLower();
+
+                    if (!string.IsNullOrEmpty(fieldName))
+                        rowData[fieldName] = value;
+                }
+                m_data_array.Add(rowData);
+            }
+
+            /*
             //--以第一列为ID，转换成ID->Object的字典
-            int firstDataRow = headerRows - 1;
-            DataRow clientDataTypeRow = sheet.Rows[1];  // 客户端解析数据的类型行
+//             int firstDataRow = headerRows - 1;
+//             DataRow clientDataTypeRow = sheet.Rows[1];  // 客户端解析数据的类型行
             for (int i = firstDataRow; i < sheet.Rows.Count; i++)
             {
                 DataRow row = sheet.Rows[i];
-                string ID = row[sheet.Columns[0]].ToString();
+                string ID = row[sheet.Columns[columnRange[0]]].ToString();
                 if (ID.Length <= 0)
                     continue;
 
                 var rowData = new Dictionary<string, object>();
+                Int32 columnIndex = 0;
                 foreach (DataColumn column in sheet.Columns)
                 {
+                    if (columnIndex < columnRange[0])
+                    {
+                        ++columnIndex;
+                        continue;
+                    }
+                    if (columnRange[1] != -1 && columnIndex > columnRange[1])
+                    {
+                        break;
+                    }
+                    ++columnIndex;
                     object value = row[column];
-                    object dataType = clientDataTypeRow[column];
-                    value = StringValue2TypeValue(value, dataType);
+//                     object dataType = clientDataTypeRow[column];
+//                     value = StringValue2TypeValue(value, dataType);
+                    value = StringValue2TypeValueEx(ID, value);
                     // 表头自动转换成小写
-                    string fieldName = column.ToString();
+                    string fieldName = column[1].ToString();
                     if (lowcase)    
                         fieldName = fieldName.ToLower();
 
@@ -57,7 +98,48 @@ namespace excel2json
 
 //                 m_data_dict[ID] = rowData;
                 m_data_array.Add(rowData);
+            } */
+        }
+
+        private object StringValue2TypeValueEx(string key, object value)
+        {
+            string dataType = m_type_dict[key];
+            if (dataType.CompareTo("int32") == 0)
+            {
+                value = Convert.ToInt32(value);
             }
+            else if (dataType.StartsWith("array_2v"))
+            {
+                string itemDataType;
+                Int32 posBeg = dataType.IndexOf('(');
+                Int32 posEnd = dataType.LastIndexOf(')');
+                if (posBeg != -1 || posEnd != -1)
+                {
+                    itemDataType = dataType.Substring(posBeg + 1, posEnd - posBeg - 1);
+                }
+
+                List<List<object>> valueArray2v;    // TODO here
+
+                string valueString = Convert.ToString(value);
+                valueString = valueString.TrimStart('[');
+                valueString = valueString.TrimEnd(']');
+                char[] splitStr = new char[]{']',',','['};
+                string[] subValueList = valueString.Split(splitStr);
+
+                for (int i = 0; i < subValueList.Length; ++i)
+                {
+                    string[] subSubValueList = subValueList[i].Split(',');
+                    for (int j = 0; j < subSubValueList.Length; ++j)
+                    {
+                        //
+                    }
+                }
+            }
+            else if (dataType.StartsWith("array_1v"))
+            {
+
+            }
+            return value;
         }
 
         // 获取数组元素类型

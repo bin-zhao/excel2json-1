@@ -33,6 +33,31 @@ namespace excel2json
                 set;
             }
 
+            [Option('h', "header", Required = false, DefaultValue = 2, HelpText = "表格中有几行是表头.")]
+            public int HeaderRows
+            {
+                get;
+                set;
+            }
+
+            [Option('t', "sheet-index", Required = false, DefaultValue = 0, HelpText = "输入的sheet序号，从0开始.")]
+            public int SheetIndex
+            {
+                get;
+                set;
+            }
+
+            [Option('r', "column-range", Required = false, DefaultValue = "1-", HelpText = "导出的列范围.")]
+            public string ColumnRange
+            {
+                get;
+                set;
+            }
+
+            /// <summary>
+            /// ////////////////////////////////////////////////////////////////////////////////
+            /// </summary>
+
             [Option('s', "sql", Required = false, HelpText = "指定输出的SQL文件路径.")]
             public string SQLPath
             {
@@ -42,13 +67,6 @@ namespace excel2json
 
             [Option('p', "csharp", Required = false, HelpText = "指定输出的C#数据定义代码文件路径.")]
             public string CSharpPath
-            {
-                get;
-                set;
-            }
-
-            [Option('h', "header", Required = false, DefaultValue = 4, HelpText = "表格中有几行是表头.")]
-            public int HeaderRows
             {
                 get;
                 set;
